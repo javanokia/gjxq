@@ -1,0 +1,382 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>3D 国际象棋 - 3D Royal Chess</title>
+  <link rel="stylesheet" href="/src/style.css" />
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700;800&family=Noto+Sans+SC:wght@400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+  <!-- 3D Canvas Container -->
+  <div id="canvas-container"></div>
+
+  <!-- Header Overlay -->
+  <header class="app-header">
+    <div class="header-left">
+      <div class="logo">
+        <span class="logo-icon" id="logo-icon-svg"></span>
+        <div class="logo-text">
+          <h1>3D 国际象棋</h1>
+          <span class="subtitle">ROYAL CHESS 3D</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Active Turn Status Badge -->
+    <div class="header-center">
+      <div id="turn-badge" class="turn-badge white-turn">
+        <div class="turn-dot"></div>
+        <span id="turn-text">白方回合</span>
+        <span id="check-alert" class="check-alert hidden">将军 CHECK</span>
+      </div>
+    </div>
+
+    <div class="header-right">
+      <button id="btn-sound" class="icon-btn" title="声音开关">
+        <span id="sound-icon" class="svg-icon"></span>
+      </button>
+      <button id="btn-rules" class="icon-btn" title="规则与操作说明">
+        <span id="help-icon-svg" class="svg-icon"></span>
+      </button>
+    </div>
+  </header>
+
+  <!-- Side Floating Panel (Game Controls & Info) -->
+  <aside class="game-panel" id="game-panel">
+    <!-- Panel Toggle Button for Mobile / Small Screens -->
+    <button id="panel-toggle-btn" class="panel-toggle" title="折叠/展开面板">
+      <span class="toggle-icon svg-icon" id="panel-toggle-icon"></span>
+    </button>
+
+    <div class="panel-content">
+      <!-- Mode Selection Section -->
+      <section class="panel-section">
+        <h3 class="section-title">游戏模式</h3>
+        <div class="button-group segmented-control">
+          <button id="mode-pve" class="seg-btn active">
+            <span class="btn-icon-svg" id="icon-mode-pve"></span>
+            <span>人机对战</span>
+          </button>
+          <button id="mode-pvp" class="seg-btn">
+            <span class="btn-icon-svg" id="icon-mode-pvp"></span>
+            <span>双人对战</span>
+          </button>
+          <button id="mode-online" class="seg-btn">
+            <span class="btn-icon-svg" id="icon-mode-online"></span>
+            <span>在线联机</span>
+          </button>
+        </div>
+
+        <!-- AI Options (Visible in PvE mode) -->
+        <div id="ai-options-box" class="sub-options">
+          <div class="option-row">
+            <span class="option-label">玩家执棋</span>
+            <div class="button-group mini-segmented">
+              <button id="color-white" class="mini-btn active">
+                <span class="mini-piece-icon" id="icon-color-white"></span>
+                <span>执白</span>
+              </button>
+              <button id="color-black" class="mini-btn">
+                <span class="mini-piece-icon" id="icon-color-black"></span>
+                <span>执黑</span>
+              </button>
+            </div>
+          </div>
+          <div class="option-row">
+            <span class="option-label">AI 难度</span>
+            <div class="button-group mini-segmented">
+              <button data-diff="easy" class="mini-btn diff-btn">简单</button>
+              <button data-diff="medium" class="mini-btn diff-btn active">中等</button>
+              <button data-diff="hard" class="mini-btn diff-btn">大师</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Online Multiplayer Box (Visible in Online mode) -->
+        <div id="online-options-box" class="sub-options hidden">
+          <div class="p2p-badge">
+            <span class="p2p-dot"></span>
+            <span>WebRTC P2P 浏览器端直连 · 纯静态免服务器</span>
+          </div>
+
+          <!-- Room Lobby State (Not in room yet) -->
+          <div id="online-lobby-panel" class="online-panel">
+            <div class="online-section">
+              <span class="online-sub-title">1. 创建房间</span>
+              <div class="option-row">
+                <span class="option-label">房主选择</span>
+                <div class="button-group mini-segmented">
+                  <button id="host-color-white" class="mini-btn active">
+                    <span class="mini-piece-icon" id="icon-host-white"></span>
+                    <span>执白</span>
+                  </button>
+                  <button id="host-color-black" class="mini-btn">
+                    <span class="mini-piece-icon" id="icon-host-black"></span>
+                    <span>执黑</span>
+                  </button>
+                  <button id="host-color-random" class="mini-btn">
+                    <span class="mini-piece-icon" id="icon-host-random"></span>
+                    <span>随机</span>
+                  </button>
+                </div>
+              </div>
+              <button id="btn-create-room" class="primary-btn mini-full-btn">
+                <span class="btn-icon-svg" id="icon-create-room"></span>
+                <span>生成 6 位房间号</span>
+              </button>
+            </div>
+
+            <div class="online-divider"><span>或者</span></div>
+
+            <div class="online-section">
+              <span class="online-sub-title">2. 加入已有房间</span>
+              <div class="input-with-btn">
+                <input id="input-room-code" type="text" inputmode="numeric" pattern="[0-9]*" placeholder="输入 6 位纯数字房间号" maxlength="6" autocomplete="off" />
+                <button id="btn-join-room" class="secondary-btn">加入对战</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- In-Room Active Match State -->
+          <div id="online-room-panel" class="online-panel hidden">
+            <div class="room-info-card">
+              <div class="room-code-display">
+                <span class="room-code-label">房间号</span>
+                <span id="room-code-text" class="room-code-val">------</span>
+                <button id="btn-copy-link" class="copy-btn" title="复制邀请链接">
+                  <span class="btn-icon-svg" id="icon-copy-link"></span>
+                  <span>复制链接</span>
+                </button>
+              </div>
+              <div class="room-players-status">
+                <div class="player-tag self-tag">
+                  <span id="self-role-text">你执白</span>
+                </div>
+                <div class="player-tag opponent-tag">
+                  <span id="opponent-status-dot" class="status-dot waiting"></span>
+                  <span id="opponent-status-text">等待对手加入...</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- In-game quick interaction bar -->
+            <div class="online-actions-grid">
+              <button id="btn-quick-chat" class="mini-action-btn" title="快捷短语">
+                <span class="btn-icon-svg" id="icon-chat"></span>
+                <span>快捷互动</span>
+              </button>
+              <button id="btn-offer-draw" class="mini-action-btn" title="提议和棋">
+                <span class="btn-icon-svg" id="icon-draw"></span>
+                <span>提议和棋</span>
+              </button>
+              <button id="btn-online-resign" class="mini-action-btn danger" title="认输">
+                <span class="btn-icon-svg" id="icon-resign"></span>
+                <span>认输</span>
+              </button>
+              <button id="btn-leave-room" class="mini-action-btn" title="退出房间">
+                <span class="btn-icon-svg" id="icon-leave"></span>
+                <span>退出房间</span>
+              </button>
+            </div>
+
+            <!-- Quick Chat Picker Popover -->
+            <div id="quick-chat-menu" class="chat-menu hidden">
+              <button class="chat-item" data-text="妙手！精彩！">妙手！精彩！</button>
+              <button class="chat-item" data-text="承让承让！">承让承让！</button>
+              <button class="chat-item" data-text="容我深思熟虑...">容我深思熟虑...</button>
+              <button class="chat-item" data-text="下得漂亮！">下得漂亮！</button>
+              <button class="chat-item" data-text="这步走得有点悬~">这步走得有点悬~</button>
+              <button class="chat-item" data-text="再来一局决胜负！">再来一局决胜负！</button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Scene Atmosphere Theme Section -->
+      <section class="panel-section">
+        <h3 class="section-title">场景氛围</h3>
+        <div class="scene-grid">
+          <button data-scene="royal" class="scene-btn active" title="皇家殿堂 - 金碧辉煌与古典大理石">
+            <span class="scene-icon-svg" id="icon-scene-royal"></span>
+            <span>皇家殿堂</span>
+          </button>
+          <button data-scene="penthouse" class="scene-btn" title="摩天阁楼 - 现代极简与天际全景">
+            <span class="scene-icon-svg" id="icon-scene-penthouse"></span>
+            <span>摩天阁楼</span>
+          </button>
+          <button data-scene="study" class="scene-btn" title="静谧书斋 - 典雅红木与温暖壁炉">
+            <span class="scene-icon-svg" id="icon-scene-study"></span>
+            <span>静谧书斋</span>
+          </button>
+          <button data-scene="tournament" class="scene-btn" title="国际赛事 - 现代锦标赛舞台与专业打光">
+            <span class="scene-icon-svg" id="icon-scene-tournament"></span>
+            <span>国际赛事</span>
+          </button>
+        </div>
+      </section>
+
+      <!-- Camera Perspectives Section -->
+      <section class="panel-section">
+        <h3 class="section-title">视角切换</h3>
+        <div class="camera-grid">
+          <button data-view="white" class="cam-btn active" title="白方视点">白方视角</button>
+          <button data-view="black" class="cam-btn" title="黑方视点">黑方视角</button>
+          <button data-view="top" class="cam-btn" title="2D平面俯视">平面俯视</button>
+          <button data-view="isometric" class="cam-btn" title="3D剧场视角">等角视距</button>
+          <button data-view="side" class="cam-btn" title="侧视观战">侧翼观战</button>
+        </div>
+        <div class="toggle-row">
+          <label class="switch-label">
+            <input type="checkbox" id="auto-camera-toggle" />
+            <span class="slider round"></span>
+            <span class="switch-text">走子后自动换向 (双人)</span>
+          </label>
+        </div>
+      </section>
+
+      <!-- Captured Pieces & Material Count -->
+      <section class="panel-section">
+        <h3 class="section-title">子力状态</h3>
+        <div class="captured-container">
+          <div class="captured-side">
+            <div class="captured-header">
+              <span class="side-tag white-tag">白方斩获</span>
+              <span id="white-advantage" class="advantage-badge"></span>
+            </div>
+            <div id="white-captured-list" class="captured-pieces"></div>
+          </div>
+          <div class="captured-side">
+            <div class="captured-header">
+              <span class="side-tag black-tag">黑方斩获</span>
+              <span id="black-advantage" class="advantage-badge"></span>
+            </div>
+            <div id="black-captured-list" class="captured-pieces"></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Move History -->
+      <section class="panel-section flex-grow">
+        <h3 class="section-title">着法记录 (Move History)</h3>
+        <div class="history-scroll" id="history-scroll">
+          <table class="history-table">
+            <thead>
+              <tr>
+                <th width="24%">回合</th>
+                <th width="38%">白方</th>
+                <th width="38%">黑方</th>
+              </tr>
+            </thead>
+            <tbody id="history-tbody">
+              <!-- Dynamically populated -->
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- Action Buttons -->
+      <section class="panel-actions">
+        <button id="btn-undo" class="action-btn secondary">
+          <span class="btn-icon-svg" id="icon-undo-svg"></span>
+          <span>悔棋 (Undo)</span>
+        </button>
+        <button id="btn-restart" class="action-btn warning">
+          <span class="btn-icon-svg" id="icon-restart-svg"></span>
+          <span>重开一局</span>
+        </button>
+      </section>
+    </div>
+  </aside>
+
+  <!-- Toast Notification Container -->
+  <div id="toast-container" class="toast-container"></div>
+
+  <!-- Online Interaction Prompt Dialog -->
+  <dialog id="online-prompt-dialog" aria-labelledby="prompt-title">
+    <div class="dialog-content text-center">
+      <div class="prompt-icon-svg" id="prompt-icon"></div>
+      <h3 id="prompt-title" class="dialog-title">提示</h3>
+      <p id="prompt-desc" class="dialog-desc">对局消息</p>
+      <div class="dialog-buttons">
+        <button id="btn-prompt-accept" class="primary-btn" autofocus>接受</button>
+        <button id="btn-prompt-decline" class="secondary-btn">拒绝</button>
+      </div>
+    </div>
+  </dialog>
+
+  <!-- Pawn Promotion Native Dialog -->
+  <dialog id="promotion-dialog" aria-labelledby="promotion-title">
+    <div class="dialog-content">
+      <h3 id="promotion-title" class="dialog-title">兵升变 (Pawn Promotion)</h3>
+      <p class="dialog-desc">请选择要升级的棋子：</p>
+      <div class="promotion-choices">
+        <button data-piece="q" class="promo-btn">
+          <span class="promo-symbol-svg" id="promo-q"></span>
+          <span class="promo-name">后 (Queen)</span>
+        </button>
+        <button data-piece="r" class="promo-btn">
+          <span class="promo-symbol-svg" id="promo-r"></span>
+          <span class="promo-name">车 (Rook)</span>
+        </button>
+        <button data-piece="b" class="promo-btn">
+          <span class="promo-symbol-svg" id="promo-b"></span>
+          <span class="promo-name">象 (Bishop)</span>
+        </button>
+        <button data-piece="n" class="promo-btn">
+          <span class="promo-symbol-svg" id="promo-n"></span>
+          <span class="promo-name">马 (Knight)</span>
+        </button>
+      </div>
+    </div>
+  </dialog>
+
+  <!-- Game Over Native Dialog -->
+  <dialog id="game-over-dialog" aria-labelledby="gameover-title">
+    <div class="dialog-content text-center">
+      <div class="gameover-icon-svg" id="gameover-icon"></div>
+      <h2 id="gameover-title" class="dialog-title">对局结束</h2>
+      <p id="gameover-desc" class="gameover-desc">白方获胜</p>
+      <div class="dialog-buttons">
+        <button id="btn-play-again" class="primary-btn" autofocus>再来一局</button>
+        <button id="btn-review-board" class="secondary-btn">回看棋盘</button>
+      </div>
+    </div>
+  </dialog>
+
+  <!-- Help / Instructions Native Dialog -->
+  <dialog id="help-dialog" aria-labelledby="help-title">
+    <div class="dialog-content">
+      <h3 id="help-title" class="dialog-title">3D 国际象棋操作指南</h3>
+      <div class="help-body">
+        <h4>3D 视角操作</h4>
+        <ul>
+          <li><strong>旋转视角：</strong>鼠标左键长按拖动 / 触屏单指滑动</li>
+          <li><strong>平移棋盘：</strong>鼠标右键长按拖动 / 触屏双指平移</li>
+          <li><strong>缩放距离：</strong>鼠标滚轮滑动 / 触屏双指捏合缩放</li>
+        </ul>
+        <h4>走棋规则与交互</h4>
+        <ul>
+          <li><strong>选择棋子：</strong>点击己方棋子，棋子底部显现微光光环。</li>
+          <li><strong>落子：</strong>绿色高亮代表合法移动位置，红色圆环代表可吃掉的敌方棋子。</li>
+          <li><strong>特殊着法支持：</strong>
+            <ul>
+              <li>王车易位 (Castling)：点击国王移动两格，车会自动跳移完成易位。</li>
+              <li>吃过路兵 (En Passant)：自动识别并在合法时标记吃过路兵路线。</li>
+              <li>兵升变 (Promotion)：当兵行至底线时，弹出升变面板任选后、车、象、马。</li>
+            </ul>
+          </li>
+          <li><strong>智能引擎：</strong>内置 Minimax 搜索与 Alpha-Beta 剪枝 AI，提供三种难度。</li>
+        </ul>
+      </div>
+      <form method="dialog" class="dialog-buttons">
+        <button class="primary-btn">我知道了</button>
+      </form>
+    </div>
+  </dialog>
+
+  <script type="module" src="/src/main.ts"></script>
+</body>
+</html>
